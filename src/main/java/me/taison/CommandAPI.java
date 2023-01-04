@@ -4,6 +4,7 @@ import me.taison.adnotations.Aliases;
 import me.taison.adnotations.Command;
 import me.taison.adnotations.Permission;
 import me.taison.adnotations.argumentsmap.ArgumentsMap;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,6 +21,7 @@ public final class CommandAPI {
 
     public static String ILLEGAL_SENDER_MESSAGE = "&4Aby użyć tej komendy musisz być graczem!";
     public static String COMMAND_EXCEPTION_MESSAGE = "&4Jeżeli widzisz ten komunikat, skontaktuj się z administratorem!";
+    public static String PERMISSION_MESSAGE = "&4Nie posiadasz uprawnień!";
 
     private final JavaPlugin javaPlugin;
     private final List<String> packageNames;
@@ -86,6 +88,7 @@ public final class CommandAPI {
                     }
                     if (permission != null) {
                         command.setPermission(permission.permission());
+                        command.setPermissionMessage(ChatColor.translateAlternateColorCodes('&', PERMISSION_MESSAGE));
                     }
                     commandMap.register(this.javaPlugin.getName(), command);
 
@@ -93,9 +96,7 @@ public final class CommandAPI {
                     e.printStackTrace();
                 }
             }
-
         });
-
     }
 
 
