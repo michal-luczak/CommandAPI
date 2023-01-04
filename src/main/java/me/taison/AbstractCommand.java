@@ -1,46 +1,66 @@
 package me.taison;
 
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import me.taison.adnotations.Aliases;
+import me.taison.adnotations.Command;
+import me.taison.adnotations.Permission;
+import me.taison.adnotations.PlayerNotRequired;
+import me.taison.adnotations.argumentsmap.ArgumentsMap;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Arrays;
+public abstract class AbstractCommand {
 
-public abstract class AbstractCommand extends Command implements CommandExecutor {
+    private final Command commandInfo;
+    private final Aliases aliases;
+    private final Permission permission;
+    private final PlayerNotRequired playerNotRequired;
+    private final ArgumentsMap argumentsMap;
 
-    private final ICommandInfo commandInfo;
 
-    public ICommandInfo getCommandInfo() {
+
+    public Aliases getAliases() {
+        return aliases;
+    }
+
+    public Permission getPermission() {
+        return permission;
+    }
+
+    public Command getCommandInfo() {
         return commandInfo;
     }
 
-    public AbstractCommand(String command, String description, String usage, String[] aliases) {
-        super(command, description, usage, Arrays.asList(aliases));
-        commandInfo = getClass().getDeclaredAnnotation(ICommandInfo.class);
+    public PlayerNotRequired getPlayerNotRequired() {
+        return playerNotRequired;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if(commandInfo.isRequirePermission() && !sender.hasPermission(commandInfo.permission())) {
-            //TODO messages
-            return true;
-        }
-        if (commandInfo.isRequirePlayer() && !(sender instanceof Player)) {
-            //TODO messages
-            return true;
+    public ArgumentsMap getArgumentsMap() {
+        return argumentsMap;
+    }
+
+    public AbstractCommand() {
+        commandInfo = getClass().getDeclaredAnnotation(Command.class);
+        aliases = getClass().getDeclaredAnnotation(Aliases.class);
+        permission = getClass().getDeclaredAnnotation(Permission.class);
+        playerNotRequired = getClass().getDeclaredAnnotation(PlayerNotRequired.class);
+        argumentsMap = getClass().getDeclaredAnnotation(ArgumentsMap.class);
+    }
+
+    public void onCommand(CommandSender sender, String label, String[] args) {
+        if (playerNotRequired == null && !(sender instanceof Player)) {
+            sender.sendMessage(ChatColor.translateAlternateColorCodes('&', CommandAPI.ILLEGAL_SENDER_MESSAGE));
+            return;
         }
         try{
             this.execute(sender, label, args);
         }
         catch (Exception ex){
-            //TODO messages
+            sender.sendMessage(ChatColor.translateAlternateColorCodes('&', CommandAPI.COMMAND_EXCEPTION_MESSAGE));
             ex.printStackTrace();
         }
-        return true;
     }
 
-    @Override
-    public abstract boolean execute(CommandSender sender, String commandLabel, String[] args);
+    public abstract void execute(CommandSender sender, String commandLabel, String[] args);
 
 }

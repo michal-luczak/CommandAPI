@@ -1,0 +1,9 @@
+me\taison\adnotations\argumentsmap\Arguments.class
+me\taison\adnotations\Command.class
+me\taison\adnotations\Aliases.class
+me\taison\adnotations\Permission.class
+me\taison\adnotations\PlayerNotRequired.class
+me\taison\CommandAPI.class
+me\taison\adnotations\argumentsmap\ArgumentsMap.class
+me\taison\CommandAPI$1.class
+me\taison\AbstractCommand.class
