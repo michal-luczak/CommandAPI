@@ -10,7 +10,7 @@
 ```xml
 <dependency>
     <groupId>com.github.TAI5ON</groupId>
-	  <artifactId>CommandAPI</artifactId>
-	  <version>1.0.0</version>
+    <artifactId>CommandAPI</artifactId>
+    <version>1.0.0</version>
 </dependency>
 ```
