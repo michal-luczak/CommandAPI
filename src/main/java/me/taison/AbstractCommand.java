@@ -41,7 +41,7 @@ public abstract class AbstractCommand {
         return argumentsMap;
     }
 
-    public JavaPlugin getJavaPlugin() {
+    public JavaPlugin getPlugin() {
         return javaPlugin;
     }
 
