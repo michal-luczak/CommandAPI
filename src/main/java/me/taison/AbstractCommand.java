@@ -8,6 +8,7 @@ import me.taison.adnotations.argumentsmap.ArgumentsMap;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public abstract class AbstractCommand {
 
@@ -16,6 +17,7 @@ public abstract class AbstractCommand {
     private final Permission permission;
     private final PlayerNotRequired playerNotRequired;
     private final ArgumentsMap argumentsMap;
+    private final JavaPlugin javaPlugin;
 
 
 
@@ -39,12 +41,17 @@ public abstract class AbstractCommand {
         return argumentsMap;
     }
 
-    public AbstractCommand() {
+    public JavaPlugin getJavaPlugin() {
+        return javaPlugin;
+    }
+
+    public AbstractCommand(JavaPlugin javaPlugin) {
         commandInfo = getClass().getDeclaredAnnotation(Command.class);
         aliases = getClass().getDeclaredAnnotation(Aliases.class);
         permission = getClass().getDeclaredAnnotation(Permission.class);
         playerNotRequired = getClass().getDeclaredAnnotation(PlayerNotRequired.class);
         argumentsMap = getClass().getDeclaredAnnotation(ArgumentsMap.class);
+        this.javaPlugin = javaPlugin;
     }
 
     public void onCommand(CommandSender sender, String label, String[] args) {
