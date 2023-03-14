@@ -1,5 +1,6 @@
 package me.taison;
 
+import com.sun.istack.internal.NotNull;
 import me.taison.adnotations.Aliases;
 import me.taison.adnotations.Command;
 import me.taison.adnotations.Permission;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class CommandAPI {
 
@@ -32,9 +34,8 @@ public final class CommandAPI {
         this.javaPlugin = javaPlugin;
     }
 
-    public CommandAPI addPackageName(String packageName) {
-        this.packageNames.add(packageName);
-        return this;
+    public void addPackageName(String... packageName) {
+        this.packageNames.addAll(Arrays.stream(packageName).collect(Collectors.toList()));
     }
 
 
