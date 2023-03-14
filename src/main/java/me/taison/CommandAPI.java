@@ -34,8 +34,9 @@ public final class CommandAPI {
         this.javaPlugin = javaPlugin;
     }
 
-    public void addPackageName(String... packageName) {
+    public CommandAPI addPackageName(String... packageName) {
         this.packageNames.addAll(Arrays.stream(packageName).collect(Collectors.toList()));
+        return this;
     }
 
 
