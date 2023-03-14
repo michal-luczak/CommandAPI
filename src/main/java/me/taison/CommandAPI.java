@@ -1,6 +1,5 @@
 package me.taison;
 
-import com.sun.istack.internal.NotNull;
 import me.taison.adnotations.Aliases;
 import me.taison.adnotations.Command;
 import me.taison.adnotations.Permission;
@@ -20,12 +19,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public final class CommandAPI {
-
     public static String ILLEGAL_SENDER_MESSAGE = "&4Aby użyć tej komendy musisz być graczem!";
+
     public static String COMMAND_EXCEPTION_MESSAGE = "&4Jeżeli widzisz ten komunikat, skontaktuj się z administratorem!";
     public static String PERMISSION_MESSAGE = "&4Nie posiadasz uprawnień!";
 
+    public static CommandAPI getInstance(JavaPlugin plugin) {
+        return new CommandAPI(plugin);
+    }
+
+
     private final JavaPlugin javaPlugin;
+
     private final List<String> packageNames;
 
 
@@ -33,6 +38,7 @@ public final class CommandAPI {
         this.packageNames = new ArrayList<>();
         this.javaPlugin = javaPlugin;
     }
+
 
     public CommandAPI addPackageName(String... packageName) {
         this.packageNames.addAll(Arrays.stream(packageName).collect(Collectors.toList()));
@@ -99,11 +105,5 @@ public final class CommandAPI {
                 }
             }
         });
-    }
-
-
-
-    public static CommandAPI getInstance(JavaPlugin plugin) {
-        return new CommandAPI(plugin);
     }
 }
