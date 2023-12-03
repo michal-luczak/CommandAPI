@@ -1,0 +1,2 @@
+1. Dodać permission Message
+2. Wiadomości

@@ -1,109 +1,105 @@
 package me.taison;
 
-import me.taison.adnotations.Aliases;
-import me.taison.adnotations.Command;
-import me.taison.adnotations.Permission;
-import me.taison.adnotations.argumentsmap.ArgumentsMap;
-import org.bukkit.ChatColor;
+import me.taison.api.AbstractCommandExecutor;
+import me.taison.api.annotations.GetCommand;
 import org.bukkit.command.CommandMap;
-import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.reflections.Reflections;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
+import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public final class CommandAPI {
+
+    private static CommandAPI INSTANCE;
+
     public static String ILLEGAL_SENDER_MESSAGE = "&4Aby użyć tej komendy musisz być graczem!";
-
     public static String COMMAND_EXCEPTION_MESSAGE = "&4Jeżeli widzisz ten komunikat, skontaktuj się z administratorem!";
-    public static String PERMISSION_MESSAGE = "&4Nie posiadasz uprawnień!";
 
-    public static CommandAPI getInstance(JavaPlugin plugin) {
-        return new CommandAPI(plugin);
+    public static synchronized CommandAPI getInstance(JavaPlugin plugin) {
+        if (INSTANCE == null) {
+            INSTANCE = new CommandAPI(plugin);
+        }
+        return INSTANCE;
     }
-
 
     private final JavaPlugin javaPlugin;
 
-    private final List<String> packageNames;
-
-
-    public CommandAPI(JavaPlugin javaPlugin) {
-        this.packageNames = new ArrayList<>();
+    private CommandAPI(JavaPlugin javaPlugin) {
         this.javaPlugin = javaPlugin;
     }
 
-
-    public CommandAPI addPackageName(String... packageName) {
-        this.packageNames.addAll(Arrays.stream(packageName).collect(Collectors.toList()));
-        return this;
+    public void loadAndRegisterCommands() {
+        javaPlugin.getDataFolder().mkdir();
+        File file = new File(javaPlugin.getDataFolder(), "commands.yml");
+        YamlConfiguration commandFile = loadCommandFile(file);
+        Set<TaiCommand> commandList = loadCommandsFromFile(commandFile);
+        addCommandsFromDefinedExecutors(commandList);
+        registerCommands(commandList);
     }
 
+    private void addCommandsFromDefinedExecutors(Set<TaiCommand> commandSet) {
+        ConfigurationBuilder configurationBuilder = new ConfigurationBuilder().setUrls(ClasspathHelper.forClass(javaPlugin.getClass()));
+        Reflections reflections = new Reflections(configurationBuilder);
+        Set<TaiCommand> definedCommands = reflections.getSubTypesOf(AbstractCommandExecutor.class)
+                .stream()
+                .filter(clazz -> clazz.isAnnotationPresent(GetCommand.class))
+                .filter(clazz -> javaPlugin.getCommand(clazz.getDeclaredAnnotation(GetCommand.class).value()) == null)
+                .map(clazz -> TaiCommand.builder().name(clazz.getDeclaredAnnotation(GetCommand.class).value()).build())
+                .collect(Collectors.toSet());
+        commandSet.addAll(definedCommands);
+    }
 
-    public void registerCommands() {
-        this.packageNames.forEach(packageName -> {
-            for (Class<? extends AbstractCommand> clazz : new Reflections(this.javaPlugin.getClass().getPackage().getName() + packageName).getSubTypesOf(AbstractCommand.class)) {
-                try {
-                    AbstractCommand playerCommand = clazz.getDeclaredConstructor().newInstance();
+    private void registerCommands(Set<TaiCommand> commandList) {
+        try {
+            Field field = javaPlugin.getServer()
+                    .getClass()
+                    .getDeclaredField("commandMap");
+            field.setAccessible(true);
+            CommandMap commandMap = (CommandMap) field.get(javaPlugin.getServer());
+            commandList.forEach(command -> commandMap.register(javaPlugin.getName(), command));
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-                    Command commandInfo = playerCommand.getCommandInfo();
-                    Aliases aliases = playerCommand.getAliases();
-                    Permission permission = playerCommand.getPermission();
-                    ArgumentsMap argumentsMap = playerCommand.getArgumentsMap();
+    private Set<TaiCommand> loadCommandsFromFile(YamlConfiguration commandFile) {
+        Set<String> keys = commandFile.getKeys(true);
+        return keys.stream().map(key -> {
+            ConfigurationSection configurationSection = commandFile.getConfigurationSection(key);
+            Objects.requireNonNull(configurationSection);
+            String usage = configurationSection.getString("usage");
+            String description = configurationSection.getString("description");
+            String permission = configurationSection.getString("permission");
+            String permissionMessage = configurationSection.getString("permissionMessage");
+            List<String> aliases = configurationSection.getStringList("aliases");
+            List<List<String>> argumentsMap = (List<List<String>>) configurationSection.getList("argumentsMap");
+            return TaiCommand.builder()
+                    .name(key)
+                    .usageMessage(usage)
+                    .description(description)
+                    .permission(permission)
+                    .permissionMessage(permissionMessage)
+                    .argumentsMap(argumentsMap)
+                    .aliases(aliases)
+                    .build();
+        }).collect(Collectors.toSet());
+    }
 
-                    Field field = this.javaPlugin.getServer().getClass().getDeclaredField("commandMap");
-                    field.setAccessible(true);
-                    CommandMap commandMap = (CommandMap) field.get(this.javaPlugin.getServer());
-                    org.bukkit.command.Command command = new org.bukkit.command.Command(commandInfo.name()) {
-                        @Override
-                        public boolean execute(CommandSender sender, String commandLabel, String[] args) {
-                            playerCommand.onCommand(sender, commandLabel, args);
-                            return false;
-                        }
-
-                        @Override
-                        public List<String> tabComplete(CommandSender sender, String alias, String[] args) throws IllegalArgumentException {
-
-                            List<String> arguments;
-
-                            if (args.length <= argumentsMap.arguments().length) {
-                                arguments = new ArrayList<>();
-                                Arrays.stream(argumentsMap.arguments()[args.length - 1].arguments())
-                                        .filter(argument -> {
-                                            return argument.toLowerCase().startsWith(args[args.length - 1]);
-                                        })
-                                        .forEach(arguments::add);
-
-                                Collections.sort(arguments);
-                                return arguments;
-                            }
-
-                            return null;
-                        }
-                    };
-
-                    command.setDescription(commandInfo.description())
-                            .setUsage(commandInfo.usage());
-
-                    if (aliases != null) {
-                        command.setAliases(Arrays.asList(aliases.aliases()));
-                    }
-                    if (permission != null) {
-                        command.setPermission(permission.permission());
-                        command.setPermissionMessage(ChatColor.translateAlternateColorCodes('&', PERMISSION_MESSAGE));
-                    }
-                    commandMap.register(this.javaPlugin.getName(), command);
-
-                } catch (InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException | NoSuchFieldException e) {
-                    e.printStackTrace();
-                }
+    private YamlConfiguration loadCommandFile(File file) {
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        });
+        }
+        return YamlConfiguration.loadConfiguration(file);
     }
 }
