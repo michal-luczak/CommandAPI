@@ -1,7 +1,8 @@
 package me.taison;
 
 import me.taison.api.AbstractCommandExecutor;
-import me.taison.api.annotations.GetCommand;
+import me.taison.api.annotations.CommandExecutor;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -11,6 +12,7 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,10 +40,36 @@ public final class CommandAPI {
     public void loadAndRegisterCommands() {
         javaPlugin.getDataFolder().mkdir();
         File file = new File(javaPlugin.getDataFolder(), "commands.yml");
-        YamlConfiguration commandFile = loadCommandFile(file);
+        YamlConfiguration commandFile = getCommandFile(file);
         Set<TaiCommand> commandList = loadCommandsFromFile(commandFile);
         addCommandsFromDefinedExecutors(commandList);
         registerCommands(commandList);
+        commandList.forEach(command -> saveCommandsToFile(commandFile, file, command));
+    }
+
+    private void saveCommandsToFile(YamlConfiguration commandsConfig, File commandsFile, TaiCommand command) {
+        ConfigurationSection configurationSection = commandsConfig.getConfigurationSection(command.getName());
+        if (!Objects.isNull(configurationSection)) {
+            setIfNull(configurationSection, "usage", command.getUsage());
+            setIfNull(configurationSection, "description", command.getDescription());
+            setIfNull(configurationSection, "permission", command.getPermission());
+            setIfNull(configurationSection, "permissionMessage", command.permissionMessage());
+            setIfNull(configurationSection, "aliases", command.getAliases());
+            setIfNull(configurationSection, "argumentsMap", command.getArgumentsMap());
+        } else {
+            commandsConfig.createSection(command.getName(), command.toMap());
+        }
+        try {
+            commandsConfig.save(commandsFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setIfNull(ConfigurationSection configurationSection, String key, Object value) {
+        if (Objects.isNull(configurationSection.get(key))) {
+            configurationSection.set(key, value);
+        }
     }
 
     private void addCommandsFromDefinedExecutors(Set<TaiCommand> commandSet) {
@@ -49,9 +77,9 @@ public final class CommandAPI {
         Reflections reflections = new Reflections(configurationBuilder);
         Set<TaiCommand> definedCommands = reflections.getSubTypesOf(AbstractCommandExecutor.class)
                 .stream()
-                .filter(clazz -> clazz.isAnnotationPresent(GetCommand.class))
-                .filter(clazz -> javaPlugin.getCommand(clazz.getDeclaredAnnotation(GetCommand.class).value()) == null)
-                .map(clazz -> TaiCommand.builder().name(clazz.getDeclaredAnnotation(GetCommand.class).value()).build())
+                .filter(clazz -> clazz.isAnnotationPresent(CommandExecutor.class))
+                .filter(clazz -> javaPlugin.getCommand(clazz.getDeclaredAnnotation(CommandExecutor.class).value()) == null)
+                .map(clazz -> TaiCommand.builder().name(clazz.getDeclaredAnnotation(CommandExecutor.class).value()).build())
                 .collect(Collectors.toSet());
         commandSet.addAll(definedCommands);
     }
@@ -70,8 +98,9 @@ public final class CommandAPI {
     }
 
     private Set<TaiCommand> loadCommandsFromFile(YamlConfiguration commandFile) {
-        Set<String> keys = commandFile.getKeys(true);
+        Set<String> keys = commandFile.getKeys(false);
         return keys.stream().map(key -> {
+            System.out.println(key);
             ConfigurationSection configurationSection = commandFile.getConfigurationSection(key);
             Objects.requireNonNull(configurationSection);
             String usage = configurationSection.getString("usage");
@@ -92,7 +121,7 @@ public final class CommandAPI {
         }).collect(Collectors.toSet());
     }
 
-    private YamlConfiguration loadCommandFile(File file) {
+    private YamlConfiguration getCommandFile(File file) {
         if (!file.exists()) {
             try {
                 file.createNewFile();

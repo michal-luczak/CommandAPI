@@ -46,6 +46,10 @@ final class TaiCommand extends Command {
         this.argumentsMap = argumentsMap;
     }
 
+    public List<List<String>> getArgumentsMap() {
+        return argumentsMap;
+    }
+
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         return onExecute.onCommand(sender, this, commandLabel, args);

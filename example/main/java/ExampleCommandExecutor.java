@@ -1,10 +1,10 @@
 import me.taison.api.AbstractCommandExecutor;
-import me.taison.api.annotations.GetCommand;
+import me.taison.api.annotations.CommandExecutor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-@GetCommand("test")
+@CommandExecutor("test")
 class ExampleCommandExecutor extends AbstractCommandExecutor {
 
     @Override
